@@ -1,0 +1,14 @@
+# Parameter file that contains geometric and material property information for ITER's CS superconducting cables
+
+# Geometric parameters
+steel_jacket_side_length = '${units 49 mm}'
+cable_length = '${units 0.45 m -> mm}'
+cable_radius = ${units 16.3 mm}
+# Cooling channel diameter is total 9 mm: 7 mm helium channel and 2 mm spiral tube
+channel_radius = ${units 4.5 mm}
+# Unit conversion
+unit_scale = '${units 1 N/m^3 -> N/mm^3}'
+
+# Mechanical Properties
+youngs_modulus = '${units 191.7e09 Pa -> MPa}'
+poissons_ratio = 0.268  # dimensionless

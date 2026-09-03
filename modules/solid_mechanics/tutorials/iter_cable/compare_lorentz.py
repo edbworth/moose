@@ -4,13 +4,29 @@ Compare MOOSE simulation results to analytical Lorentz force solution.
 Comprehensive verification including axisymmetry and axial uniformity checks.
 """
 
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Physical constants from the input file
-vacuum_permeability = 1.25663706e-6  # N/A^2
-current_density_z = 1.0e02  # A/mm^2 (after unit conversion from 1e6 A/m^2)
+# Redirect output to log file
+log_file = open("lorentz_verification.log", "w")
+sys.stdout = log_file
+
+# Read physical constants from MOOSE output
+try:
+    constants = pd.read_csv("data/copper_cylinder_out.csv")
+    # Get the last timestep values (most recent)
+    vacuum_permeability = constants["vacuum_permeability"].iloc[-1]  # N/A^2
+    current_density_z = constants["current_density_z"].iloc[-1]  # A/mm^2
+    print(f"Read from MOOSE output:")
+    print(f"  vacuum_permeability = {vacuum_permeability:.6e} N/A^2")
+    print(f"  current_density_z = {current_density_z:.6e} A/mm^2")
+except FileNotFoundError:
+    print("Warning: Could not find 'data/copper_cylinder_out.csv'")
+    print("Using fallback values. Run the simulation first for accurate constants.")
+    vacuum_permeability = 1.25663706e-6  # N/A^2
+    current_density_z = 1.0  # A/mm^2
 
 
 def analytical_lorentz_radial(r):
@@ -60,6 +76,7 @@ def process_radial_line(filename, line_name):
     # Extract Cartesian components from MOOSE simulation
     lorentz_x_sim = data["lorentz_x_aux"].values
     lorentz_y_sim = data["lorentz_y_aux"].values
+    lorentz_z_sim = data["lorentz_z_aux"].values
 
     # Mask for non-zero radius to avoid division by zero
     mask = r > 1e-10
@@ -92,6 +109,7 @@ def process_radial_line(filename, line_name):
         "lorentz_analytical": lorentz_radial_analytical,
         "abs_error": absolute_error,
         "rel_error": relative_error,
+        "lorentz_z_sim": lorentz_z_sim,
     }
 
 
@@ -123,6 +141,7 @@ def process_axial_line(filename):
     # Extract Cartesian components
     lorentz_x_sim = data["lorentz_x_aux"].values
     lorentz_y_sim = data["lorentz_y_aux"].values
+    lorentz_z_sim = data["lorentz_z_aux"].values
 
     # Compute radial component
     mask = r > 1e-10
@@ -139,6 +158,7 @@ def process_axial_line(filename):
         "r": r,
         "lorentz_sim": lorentz_radial_sim,
         "lorentz_analytical": lorentz_radial_analytical,
+        "lorentz_z_sim": lorentz_z_sim,
     }
 
 
@@ -176,6 +196,11 @@ for line in radial_lines:
     max_rel_error = np.max(line["rel_error"][mask]) * 100
     mean_rel_error = np.mean(line["rel_error"][mask]) * 100
 
+    # Statistics for z-component (expected to be zero)
+    max_lorentz_z = np.max(np.abs(line["lorentz_z_sim"][mask]))
+    mean_lorentz_z = np.mean(np.abs(line["lorentz_z_sim"][mask]))
+    max_lorentz_radial = np.max(np.abs(line["lorentz_sim"][mask]))
+
     print(f"\n{line['name']}:")
     print(f"  Number of points:    {np.sum(mask)}")
     print(
@@ -185,6 +210,15 @@ for line in radial_lines:
     print(f"  Mean absolute error: {mean_abs_error:.6e} N/mm³")
     print(f"  Max relative error:  {max_rel_error:.4f} %")
     print(f"  Mean relative error: {mean_rel_error:.4f} %")
+    print(f"  Max |F_z|:           {max_lorentz_z:.6e} N/mm³ (should be ~0)")
+    print(f"  Mean |F_z|:          {mean_lorentz_z:.6e} N/mm³ (should be ~0)")
+
+    # Check if z-component is negligible compared to radial component
+    z_to_radial_ratio = max_lorentz_z / max_lorentz_radial if max_lorentz_radial > 0 else 0
+    if z_to_radial_ratio > 0.01:
+        print(f"  ⚠ WARNING: F_z/F_r = {z_to_radial_ratio*100:.2f}% exceeds 1% threshold!")
+    else:
+        print(f"  ✓ F_z negligible: F_z/F_r = {z_to_radial_ratio*100:.4f}%")
 
 # Process axial line
 print("\n2. AXIAL LINE (Uniformity Check)")
@@ -196,6 +230,11 @@ if axial_result is not None:
     )
     axial_variation = np.std(axial_result["lorentz_sim"])
     axial_mean = np.mean(axial_result["lorentz_sim"])
+
+    # Statistics for z-component (expected to be zero)
+    max_lorentz_z_axial = np.max(np.abs(axial_result["lorentz_z_sim"]))
+    mean_lorentz_z_axial = np.mean(np.abs(axial_result["lorentz_z_sim"]))
+    max_lorentz_radial_axial = np.max(np.abs(axial_result["lorentz_sim"]))
 
     print(f"\nAxial line at r = {axial_result['r'][0]:.4f} mm:")
     print(f"  Number of points:       {len(axial_result['z'])}")
@@ -209,6 +248,21 @@ if axial_result is not None:
     )
     print(f"  Max absolute error:     {np.max(axial_abs_error):.6e} N/mm³")
     print(f"  Mean absolute error:    {np.mean(axial_abs_error):.6e} N/mm³")
+    print(f"  Max |F_z|:              {max_lorentz_z_axial:.6e} N/mm³ (should be ~0)")
+    print(f"  Mean |F_z|:             {mean_lorentz_z_axial:.6e} N/mm³ (should be ~0)")
+
+    # Check if z-component is negligible compared to radial component
+    z_to_radial_ratio_axial = (
+        max_lorentz_z_axial / max_lorentz_radial_axial
+        if max_lorentz_radial_axial > 0
+        else 0
+    )
+    if z_to_radial_ratio_axial > 0.01:
+        print(
+            f"  ⚠ WARNING: F_z/F_r = {z_to_radial_ratio_axial*100:.2f}% exceeds 1% threshold!"
+        )
+    else:
+        print(f"  ✓ F_z negligible: F_z/F_r = {z_to_radial_ratio_axial*100:.4f}%")
 
     # Check if axial variation is small (indicates uniformity)
     relative_variation = (
@@ -338,7 +392,7 @@ if radial_lines:
 
 plt.savefig("lorentz_verification.png", dpi=150, bbox_inches="tight")
 print("\nPlot saved as 'lorentz_verification.png'")
-plt.show()
+plt.close(fig)
 
 # Create separate plot for 0 degree line error metrics
 if radial_lines:
@@ -417,6 +471,9 @@ if radial_lines:
         plt.tight_layout()
         plt.savefig("lorentz_0deg_error.png", dpi=150, bbox_inches="tight")
         print("Plot saved as 'lorentz_0deg_error.png'")
-        plt.show()
+        plt.close(fig2)
     else:
         print("\nWarning: 0° line data not found for error plot")
+
+# Close log file
+log_file.close()

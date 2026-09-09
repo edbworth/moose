@@ -13,9 +13,16 @@
   []
 []
 
+[SolidProperties]
+  [tungsten_props]
+    type = ThermalTungstenProperties
+  []
+[]
+
 [Materials]
   [tungsten]
-    type = TungstenThermalPropertiesMaterial
+    type = ThermalSolidPropertiesMaterial
+    sp = tungsten_props
     temperature = temperature
     outputs = 'all'
   []
@@ -113,13 +120,13 @@
       type = ParsedFunction
       symbol_names = 'T'
       symbol_values = 'x_coord'
-      expression = '3.103e2*(T/1000)^3.03/(1-8.815*T/1000+1.295e2*(T/1000)^2+1.874e3*(T/1000)^3)'
+      expression = '1000*(3.103e2*(T/1000)^3.03/(1-8.815*T/1000+1.295e2*(T/1000)^2+1.874e3*(T/1000)^3))'
   []
   [c_p_analytic_T_between_293_and_3700]
       type = ParsedFunction
       symbol_names = 'T'
       symbol_values = 'x_coord'
-      expression = '1.301e-1+2.225e-2*T/1000-7.224e-3*(T/1000)^2+3.539e-3*(T/1000)^3-3.061e-4/(T/1000)^2'
+      expression = '1000*(1.301e-1+2.225e-2*T/1000-7.224e-3*(T/1000)^2+3.539e-3*(T/1000)^3-3.061e-4/(T/1000)^2)'
   []
   [c_p_parsed_combination]
     type = ParsedFunction

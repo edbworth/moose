@@ -1,6 +1,6 @@
 [Tests]
   issues = '#31072'
-  design = 'TungstenThermalPropertiesMaterial.md'
+  design = 'ThermalTungstenProperties.md ThermalSolidPropertiesMaterial.md'
   [tungsten_props]
     type = CSVDiff
     input = 'tungsten_thermal_properties.i'

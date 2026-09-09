@@ -88,7 +88,7 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
       strain             = SMALL
       add_variables      = true
       eigenstrain_names = 'thermal_expansion'
-      generate_output = 'vonmises_stress'
+      generate_output = 'vonmises_stress strain_xx strain_yy strain_zz stress_xx stress_yy stress_zz'
       # material_output_family = MONOMIAL
       # material_output_order = FIRST
       temperature = T
@@ -103,14 +103,24 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
 []
 
 [Materials]
+
+  [stress]
+    type = ADComputeLinearElasticStress
+  []
+
+  # Elasticity and Lamé parameters
   [elasticity]
     type = ADComputeIsotropicElasticityTensor
     youngs_modulus = ${youngs_modulus}
     poissons_ratio = ${poissons_ratio}
   []
-  [stress]
-    type = ADComputeLinearElasticStress
-  []
+  # [elasticity]
+  #   type = ADComputeVariableIsotropicElasticityTensor
+  #   poissons_ratio =
+  #   youngs_modulus =
+  # []
+
+  # Thermal Expansion
   [expansion]
     type = ADComputeInstantaneousThermalExpansionFunctionEigenstrain
     temperature = T
@@ -118,11 +128,6 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
     stress_free_temperature = ${stress_free_temperature}
     eigenstrain_name = thermal_expansion
     outputs = 'exodus'
-  []
-  [lorentz]
-    type = GenericFunctionVectorMaterial
-    prop_names = lorentz
-    prop_values = 'lorentz_x lorentz_y lorentz_z'
   []
   [thermal_expansion_coeff_functor]
     # Note: Expression duplicated from thermal_expansion_func to enable postprocessing with variable T
@@ -134,7 +139,15 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
     property_name = thermal_expansion_coeff_functor
     output_properties = thermal_expansion_coeff_functor
     outputs = 'exodus'
-[]
+  []
+
+  # Lorentz Force Loading
+  [lorentz]
+    type = GenericFunctionVectorMaterial
+    prop_names = lorentz
+    prop_values = 'lorentz_x lorentz_y lorentz_z'
+  []
+
 []
 
 [AuxVariables]
@@ -184,7 +197,7 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
     type = FunctionAux
     variable = T
     function = 'temperature_func' #ramp up to final temperature over simulation time
-    execute_on = 'INITIAL TIMESTEP_END'
+    execute_on = 'INITIAL LINEAR'
   []
   [thermal_strain_extract]
     type = ADRankTwoAux

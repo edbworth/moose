@@ -207,6 +207,18 @@ def main() -> None:
     # Create figure with 2x2 panels
     fig, axes = plt.subplots(2, 2, figsize=(12.0, 9.0), constrained_layout=True)
 
+    # Set global font sizes for improved readability
+    plt.rcParams.update(
+        {
+            "font.size": 11,  # Base font size
+            "axes.titlesize": 13,  # Subplot titles
+            "axes.labelsize": 12,  # Axis labels
+            "xtick.labelsize": 10,  # X-axis tick labels
+            "ytick.labelsize": 10,  # Y-axis tick labels
+            "legend.fontsize": 11,  # Legend
+        }
+    )
+
     # Top left: NIST fit and MOOSE volume-averaged material property vs temperature
     axes[0, 0].plot(
         temperature_grid,
@@ -220,16 +232,16 @@ def main() -> None:
         alpha_moose[valid_mask] * 1.0e6,
         "o",
         markersize=4,
-        label="MOOSE (volume avg)",
+        label="MOOSE",
         alpha=0.7,
         color="C1",
     )
     axes[0, 0].set_xscale("log")
-    axes[0, 0].set_xlabel("Temperature [K] (log scale)")
-    axes[0, 0].set_ylabel(r"Instantaneous CTE, $\alpha$ [$10^{-6}$ K$^{-1}$]")
-    axes[0, 0].set_title("Volume-averaged CTE vs NIST OFHC copper")
+    axes[0, 0].set_xlabel("Temperature [K] (log scale)", fontweight="bold")
+    axes[0, 0].set_ylabel(r"CTE, $\alpha$ [$10^{-6}$ K$^{-1}$]", fontweight="bold")
+    axes[0, 0].set_title("MOOSE CTE vs NIST Copper", fontweight="bold")
     axes[0, 0].grid(True, which="both", alpha=0.3)
-    axes[0, 0].legend(frameon=False)
+    axes[0, 0].legend(frameon=True, framealpha=0.9, edgecolor="black")
 
     # Bottom left: Relative error in CTE
     axes[1, 0].plot(
@@ -241,9 +253,9 @@ def main() -> None:
     )
     axes[1, 0].set_xscale("log")
     axes[1, 0].set_xlim(axes[0, 0].get_xlim())  # Match top plot x-axis
-    axes[1, 0].set_xlabel("Temperature [K] (log scale)")
-    axes[1, 0].set_ylabel("Relative error [%]")
-    axes[1, 0].set_title("CTE error")
+    axes[1, 0].set_xlabel("Temperature [K] (log scale)", fontweight="bold")
+    axes[1, 0].set_ylabel("Relative error [%]", fontweight="bold")
+    axes[1, 0].set_title("CTE error", fontweight="bold")
     axes[1, 0].grid(True, which="both", alpha=0.3)
 
     # Add CTE error statistics
@@ -264,8 +276,11 @@ def main() -> None:
             alpha_stats_text,
             transform=axes[1, 0].transAxes,
             verticalalignment="top",
-            bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
-            fontsize=9,
+            bbox=dict(
+                boxstyle="round", facecolor="wheat", alpha=0.8, edgecolor="black"
+            ),
+            fontsize=10,
+            fontweight="bold",
         )
 
     # Top right: Thermal strain comparison
@@ -273,7 +288,7 @@ def main() -> None:
         temperature_moose[valid_mask],
         strain_nist[valid_mask],
         linewidth=2.0,
-        label="NIST (integrated)",
+        label="NIST",
         linestyle="--",
         color="C0",
     )
@@ -282,16 +297,16 @@ def main() -> None:
         strain_moose[valid_mask],
         "o",
         markersize=4,
-        label="MOOSE (volume avg)",
+        label="MOOSE",
         alpha=0.7,
         color="C1",
     )
     axes[0, 1].set_xscale("log")
-    axes[0, 1].set_xlabel("Temperature [K] (log scale)")
-    axes[0, 1].set_ylabel(r"Thermal strain, $\varepsilon_{xx}$ [-]")
-    axes[0, 1].set_title(r"Volume-averaged thermal strain vs integrated NIST")
+    axes[0, 1].set_xlabel("Temperature [K] (log scale)", fontweight="bold")
+    axes[0, 1].set_ylabel(r"Thermal strain, $\varepsilon_{xx}$ [-]", fontweight="bold")
+    axes[0, 1].set_title(r"MOOSE Thermal Strain vs Integrated NIST", fontweight="bold")
     axes[0, 1].grid(True, which="both", alpha=0.3)
-    axes[0, 1].legend(frameon=False)
+    axes[0, 1].legend(frameon=True, framealpha=0.9, edgecolor="black")
 
     # Bottom right: Relative error in thermal strain
     # Only plot points where strain is large enough for meaningful relative error
@@ -305,9 +320,9 @@ def main() -> None:
     )
     axes[1, 1].set_xscale("log")
     axes[1, 1].set_xlim(axes[0, 1].get_xlim())  # Match top plot x-axis
-    axes[1, 1].set_xlabel("Temperature [K] (log scale)")
-    axes[1, 1].set_ylabel("Relative error [%]")
-    axes[1, 1].set_title(r"Thermal strain $\varepsilon_{xx}$ error")
+    axes[1, 1].set_xlabel("Temperature [K] (log scale)", fontweight="bold")
+    axes[1, 1].set_ylabel("Relative error [%]", fontweight="bold")
+    axes[1, 1].set_title(r"Thermal strain $\varepsilon_{xx}$ error", fontweight="bold")
     axes[1, 1].grid(True, which="both", alpha=0.3)
 
     # Print statistics summary
@@ -344,8 +359,11 @@ def main() -> None:
             strain_stats_text,
             transform=axes[1, 1].transAxes,
             verticalalignment="top",
-            bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
-            fontsize=9,
+            bbox=dict(
+                boxstyle="round", facecolor="wheat", alpha=0.8, edgecolor="black"
+            ),
+            fontsize=10,
+            fontweight="bold",
         )
 
     # Add warning footer if temperatures outside NIST range

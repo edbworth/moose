@@ -11,8 +11,8 @@ current_density_z = '${units 1e6 A/m^2 -> A/mm^2}'
 # current_density_z = 0 # Use to turn off Lorentz force
 
 # Copper Material Properties (L.B. Freund, S. Suresh.  Thin Film Materials: Stress, Defect Formation, and Surface Evolution (2003)), Note: These are room temperature properties
-youngs_modulus = '${units 130 GPa -> MPa}' # Room Temperature
-poissons_ratio = 0.34 # Room Temperature
+# youngs_modulus = '${units 130 GPa -> MPa}' # Room Temperature
+# poissons_ratio = 0.34 # Room Temperature
 # thermal_expansion_coeff = '${units 1.657e-05 1/K}' # 293 K
 # thermal_expansion_coeff = '${units 2.8e-09 1/K}' # 4.5 K
 # thermal_expansion_coeff = '${units 4.473e-06 1/K}' # Effective coefficient
@@ -85,10 +85,12 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
 [Physics/SolidMechanics]
   [QuasiStatic]
     [all]
-      strain             = SMALL
+      strain             = FINITE
       add_variables      = true
       eigenstrain_names = 'thermal_expansion'
       generate_output = 'vonmises_stress strain_xx strain_yy strain_zz stress_xx stress_yy stress_zz'
+      # new_system = true
+      # formulation = TOTAL
       # material_output_family = MONOMIAL
       # material_output_order = FIRST
       temperature = T
@@ -98,27 +100,47 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
   [MaterialVectorBodyForce]
     [all]
       body_force = lorentz
+      # use_displaced_mesh = true
     []
   []
 []
 
 [Materials]
+  # [stress]
+  #   type = ADComputeLinearElasticStress
+  # []
+
+  # [elasticity]
+  #   type = ADComputeIsotropicElasticityTensor
+  #   youngs_modulus = ${youngs_modulus}
+  #   poissons_ratio = ${poissons_ratio}
+  # []
 
   [stress]
-    type = ADComputeLinearElasticStress
+    type = ADComputeFiniteStrainElasticStress
   []
 
-  # Elasticity and Lamé parameters
-  [elasticity]
-    type = ADComputeIsotropicElasticityTensor
-    youngs_modulus = ${youngs_modulus}
-    poissons_ratio = ${poissons_ratio}
+  [youngs_modulus]
+    type = ADParsedMaterial
+    property_name = youngs_modulus
+    coupled_variables = T
+    # expression = '1e5*(1.3861 - 0.0622/(exp(138.0/T)-1))' # Table 4: https://ia800108.us.archive.org/view_archive.php?archive=/24/items/wikipedia-scholarly-sources-corpus/10.1002%252Fpssa.200880456.zip&file=10.1002%252Fpssa.2210660209.pdf&utm
+    expression = '1e3*(137-1.27e-04*T^2) ' # Page 6-1: https://nvlpubs.nist.gov/nistpubs/Legacy/MONO/nistmonograph177.pdf
   []
-  # [elasticity]
-  #   type = ADComputeVariableIsotropicElasticityTensor
-  #   poissons_ratio =
-  #   youngs_modulus =
-  # []
+
+  [poissons_ratio]
+    type = ADParsedMaterial
+    property_name = poissons_ratio
+    coupled_variables = T
+    # expression = '0.3401 + 0.0033/(exp(113.7/T)-1)' # Table 4: https://ia800108.us.archive.org/view_archive.php?archive=/24/items/wikipedia-scholarly-sources-corpus/10.1002%252Fpssa.200880456.zip&file=10.1002%252Fpssa.2210660209.pdf&utm
+    expression = '0.339 + 7.03e-08*T^2'# Page 6-23: https://nvlpubs.nist.gov/nistpubs/Legacy/MONO/nistmonograph177.pdf
+  []
+
+  [elasticity]
+    type = ADComputeVariableIsotropicElasticityTensor
+    youngs_modulus = youngs_modulus
+    poissons_ratio = poissons_ratio
+  []
 
   # Thermal Expansion
   [expansion]
@@ -129,6 +151,16 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
     eigenstrain_name = thermal_expansion
     outputs = 'exodus'
   []
+  # Lorentz Force Loading
+  [lorentz]
+    type = GenericFunctionVectorMaterial
+    prop_names = lorentz
+    prop_values = 'lorentz_x lorentz_y lorentz_z'
+  []
+
+[]
+
+[FunctorMaterials]
   [thermal_expansion_coeff_functor]
     # Note: Expression duplicated from thermal_expansion_func to enable postprocessing with variable T
     # (Functions use 't' for time, but we need to evaluate with spatially-varying temperature field T)
@@ -140,14 +172,6 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
     output_properties = thermal_expansion_coeff_functor
     outputs = 'exodus'
   []
-
-  # Lorentz Force Loading
-  [lorentz]
-    type = GenericFunctionVectorMaterial
-    prop_names = lorentz
-    prop_values = 'lorentz_x lorentz_y lorentz_z'
-  []
-
 []
 
 [AuxVariables]
@@ -197,7 +221,8 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
     type = FunctionAux
     variable = T
     function = 'temperature_func' #ramp up to final temperature over simulation time
-    execute_on = 'INITIAL LINEAR'
+    execute_on = 'INITIAL TIMESTEP_BEGIN'
+    # execute_on = 'INITIAL LINEAR'
   []
   [thermal_strain_extract]
     type = ADRankTwoAux
@@ -304,16 +329,16 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
     value = ${vacuum_permeability}
     execute_on = 'INITIAL'
   []
-  [vonmises_max]
-    type = ElementExtremeValue
-    variable = vonmises_stress
-    value_type = max
-  []
+  # [vonmises_max]
+  #   type = ElementExtremeValue
+  #   variable = vonmises_stress
+  #   value_type = max
+  # []
 
-  [vonmises_average]
-    type = ElementAverageValue
-    variable = vonmises_stress
-  []
+  # [vonmises_average]
+  #   type = ElementAverageValue
+  #   variable = vonmises_stress
+  # []
   [temperature_average]
     type = ElementAverageValue
     variable = T
@@ -393,7 +418,11 @@ stress_free_temperature = '${starting_temperature}' # Starting with initial temp
 []
 
 [Outputs]
-  exodus = true
+  [exodus]
+    type = Exodus
+    # output_material_properties = true
+    file_base = 'copper_cylinder_out'
+  []
   [csv]
     type = CSV
     file_base = 'data/copper_cylinder_out'

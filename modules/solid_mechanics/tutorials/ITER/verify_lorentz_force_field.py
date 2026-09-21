@@ -1,13 +1,23 @@
 #!/usr/bin/env python3
+# This file is part of the MOOSE framework
+# https://mooseframework.inl.gov
+#
+# All rights reserved, see COPYRIGHT for full restrictions
+# https://github.com/idaholab/moose/blob/master/COPYRIGHT
+#
+# Licensed under LGPL 2.1, please see LICENSE for details
+# https://www.gnu.org/licenses/lgpl-2.1.html
+
 """
 Compare MOOSE simulation results to analytical Lorentz force solution.
 Comprehensive verification including axisymmetry and axial uniformity checks.
 """
 
 import sys
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 # Redirect output to log file
 log_file = open("lorentz_verification.log", "w")
@@ -15,15 +25,15 @@ sys.stdout = log_file
 
 # Read physical constants from MOOSE output
 try:
-    constants = pd.read_csv("data/copper_cylinder_out.csv")
+    constants = pd.read_csv("cylinder/data/copper_cylinder_out.csv")
     # Get the last timestep values (most recent)
     vacuum_permeability = constants["vacuum_permeability"].iloc[-1]  # N/A^2
     current_density_z = constants["current_density_z"].iloc[-1]  # A/mm^2
-    print(f"Read from MOOSE output:")
+    print("Read from MOOSE output:")
     print(f"  vacuum_permeability = {vacuum_permeability:.6e} N/A^2")
     print(f"  current_density_z = {current_density_z:.6e} A/mm^2")
 except FileNotFoundError:
-    print("Warning: Could not find 'data/copper_cylinder_out.csv'")
+    print("Warning: Could not find 'cylinder/data/copper_cylinder_out.csv'")
     print("Using fallback values. Run the simulation first for accurate constants.")
     vacuum_permeability = 1.25663706e-6  # N/A^2
     current_density_z = 1.0  # A/mm^2
@@ -34,15 +44,16 @@ def analytical_lorentz_radial(r):
     Analytical solution for radial Lorentz force per unit volume.
     F_r = -μ₀ * J_z^2 * r / 2
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     r : array-like
         Radial distance from center (mm)
 
-    Returns:
-    --------
+    Returns
+    -------
     F_r : array-like
         Radial Lorentz force per unit volume (N/mm^3), negative indicates compression
+
     """
     return -vacuum_permeability * current_density_z**2 * r / 2
 
@@ -51,16 +62,17 @@ def process_radial_line(filename, line_name):
     """
     Process one radial line sample.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     filename : str
         CSV file to read
     line_name : str
         Descriptive name for this line
 
-    Returns:
-    --------
+    Returns
+    -------
     dict : Contains r, lorentz_radial_sim, lorentz_radial_analytical, errors
+
     """
     try:
         data = pd.read_csv(filename)
@@ -117,14 +129,15 @@ def process_axial_line(filename):
     """
     Process the axial line sample to verify uniformity along z.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     filename : str
         CSV file to read
 
-    Returns:
-    --------
+    Returns
+    -------
     dict : Contains z, r, lorentz_radial values
+
     """
     try:
         data = pd.read_csv(filename)
@@ -169,9 +182,9 @@ print("=" * 70)
 
 radial_lines = []
 line_configs = [
-    ("data/copper_cylinder_out_line_sample_0deg_0001.csv", "0° (x-axis)"),
-    ("data/copper_cylinder_out_line_sample_45deg_0001.csv", "45°"),
-    ("data/copper_cylinder_out_line_sample_90deg_0001.csv", "90° (y-axis)"),
+    ("cylinder/data/copper_cylinder_out_line_sample_0deg_0001.csv", "0° (x-axis)"),
+    ("cylinder/data/copper_cylinder_out_line_sample_45deg_0001.csv", "45°"),
+    ("cylinder/data/copper_cylinder_out_line_sample_90deg_0001.csv", "90° (y-axis)"),
 ]
 
 for filename, name in line_configs:
@@ -214,16 +227,22 @@ for line in radial_lines:
     print(f"  Mean |F_z|:          {mean_lorentz_z:.6e} N/mm³ (should be ~0)")
 
     # Check if z-component is negligible compared to radial component
-    z_to_radial_ratio = max_lorentz_z / max_lorentz_radial if max_lorentz_radial > 0 else 0
+    z_to_radial_ratio = (
+        max_lorentz_z / max_lorentz_radial if max_lorentz_radial > 0 else 0
+    )
     if z_to_radial_ratio > 0.01:
-        print(f"  ⚠ WARNING: F_z/F_r = {z_to_radial_ratio*100:.2f}% exceeds 1% threshold!")
+        print(
+            f"  ⚠ WARNING: F_z/F_r = {z_to_radial_ratio*100:.2f}% exceeds 1% threshold!"
+        )
     else:
         print(f"  ✓ F_z negligible: F_z/F_r = {z_to_radial_ratio*100:.4f}%")
 
 # Process axial line
 print("\n2. AXIAL LINE (Uniformity Check)")
 print("-" * 70)
-axial_result = process_axial_line("data/copper_cylinder_out_line_sample_axial_0001.csv")
+axial_result = process_axial_line(
+    "cylinder/data/copper_cylinder_out_line_sample_axial_0001.csv"
+)
 if axial_result is not None:
     axial_abs_error = np.abs(
         axial_result["lorentz_sim"] - axial_result["lorentz_analytical"]

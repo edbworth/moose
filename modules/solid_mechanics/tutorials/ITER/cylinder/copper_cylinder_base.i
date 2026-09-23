@@ -65,6 +65,13 @@ simulation_time = '${units 10 s}'
     coord = '${fparse -cable_radius} 0 0'
     use_closest_node = true
   []
+  [pin_bottom_center]
+    type = ExtraNodesetGenerator
+    input = pin_bottom_180_deg
+    new_boundary = pin_bottom_center
+    coord = '0 0 0'
+    use_closest_node = true
+  []
 []
 
 [Physics/SolidMechanics]
@@ -75,6 +82,8 @@ simulation_time = '${units 10 s}'
       # decomposition_method = EIGENSOLUTION
       eigenstrain_names = 'thermal_expansion'
       generate_output = 'vonmises_stress strain_xx strain_yy strain_zz strain_xy strain_xz strain_yz stress_xx stress_yy stress_zz stress_xy stress_xz stress_yz'
+      material_output_family = LAGRANGE
+      material_output_order = FIRST
       temperature = T
       use_automatic_differentiation = true
     []
@@ -205,12 +214,6 @@ simulation_time = '${units 10 s}'
   []
 []
 
-[Preconditioning]
-  [SMP]
-    type = SMP
-    full = true
-  []
-[]
 
 [Postprocessors]
   # Simulation parameters (for verification script)
@@ -333,12 +336,30 @@ simulation_time = '${units 10 s}'
   []
 []
 
+[Preconditioning]
+  [SMP]
+    type = SMP
+    full = true
+  []
+[]
+
 [Executioner]
   type = Transient
-  petsc_options_iname = '-pc_type '
-  petsc_options_value = 'lu'
+  solve_type = NEWTON
+  # petsc_options_iname = '-ksp_type -pc_type -pc_hypre_type -ksp_gmres_restart
+  #                      -pc_hypre_boomeramg_nodal_coarsen
+  #                      -pc_hypre_boomeramg_vec_interp_variant'
+  # petsc_options_value  = 'gmres     hypre    boomeramg      201
+                        # 1
+                        # 1'
+  petsc_options_iname = '-ksp_type -pc_type -pc_factor_mat_solver_type'
+  petsc_options_value = 'preonly   lu       mumps'
+  # petsc_options_iname = '-pc_type'
+  # petsc_options_value  = 'lu'
   end_time = ${simulation_time}
-  num_steps = 100
-  nl_rel_tol = 5e-8
-  l_max_its = 50
+  num_steps = 10
+  nl_rel_tol = 5e-9
+  # nl_abs_tol = 1e-12
+  nl_max_its = 50
+  l_max_its = 100
 []

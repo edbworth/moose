@@ -6,10 +6,12 @@
 
 # EM Parameters
 
-current_density_z = '${units 1e6 A/m^2 -> A/mm^2}'
+# current_density_z = '${units 1e6 A/m^2 -> A/mm^2}'
+current_density_z = 0
 
 # EM Material Properties
-vacuum_permeability = '${units 1.25663706e-6 N/A^2}'
+# vacuum_permeability = '${units 1.25663706e-6 N/A^2}'
+vacuum_permeability = 1.25663706e-6
 
 # [Mesh]
 #   # Add pin points for constrained boundary conditions
@@ -97,21 +99,23 @@ vacuum_permeability = '${units 1.25663706e-6 N/A^2}'
   [pin_x]
     type = ADDirichletBC
     variable = disp_x
-    boundary = 'pin_bottom_90_deg'
+    boundary = 'pin_bottom_90_deg pin_bottom_center'
     value = 0
   []
   [pin_y]
     type = ADDirichletBC
     variable = disp_y
-    boundary = 'pin_bottom_0_deg pin_bottom_180_deg'
+    boundary = 'pin_bottom_180_deg pin_bottom_center'
     value = 0
   []
   [pin_z]
     type = ADDirichletBC
     variable = disp_z
-    boundary = 'pin_bottom_0_deg pin_bottom_90_deg pin_bottom_180_deg'
+    boundary = 'pin_bottom_center pin_bottom_90_deg pin_bottom_180_deg'
     value = 0
   []
+  # [pin_new]
+  #   type = prese
 []
 
 [Functions]
@@ -169,20 +173,20 @@ vacuum_permeability = '${units 1.25663706e-6 N/A^2}'
     type = ConstantPostprocessor
     value = ${current_density_z}
     execute_on = 'INITIAL'
-    outputs = csv
+    outputs = 'csv'
   []
   [vacuum_permeability]
     type = ConstantPostprocessor
     value = ${vacuum_permeability}
     execute_on = 'INITIAL'
-    outputs = csv
+    outputs = 'csv'
   []
   [temperature_at_point]
     type = PointValue
     variable = T
     point = '${cable_radius} 0 ${fparse cable_length / 2}'
     execute_on = 'INITIAL TIMESTEP_END'
-    outputs = csv
+    outputs = 'csv'
   []
 []
 
@@ -222,6 +226,20 @@ vacuum_permeability = '${units 1.25663706e-6 N/A^2}'
     num_points = 50
     variable = 'lorentz_x_aux lorentz_y_aux lorentz_z_aux'
     sort_by = id
+  []
+  [bottom_face_disp]
+    type = NodalValueSampler
+    variable = 'disp_x disp_y disp_z'
+    boundary = 'axial_start'
+    sort_by = id
+    outputs = 'csv'
+  []
+  [bottom_face_stress]
+    type = NodalValueSampler
+    variable = 'stress_xx stress_yy stress_zz stress_xy stress_xz stress_yz'
+    boundary = 'axial_start'
+    sort_by = id
+    outputs = 'csv'
   []
 []
 

@@ -123,21 +123,18 @@
     variable = disp_x
     function = disp_x_analytical
     execute_on = 'TIMESTEP_END'
-    # outputs = 'csv'
   []
   [disp_y_L2_error]
     type = ElementL2Error
     variable = disp_y
     function = disp_y_analytical
     execute_on = 'TIMESTEP_END'
-    # outputs = 'csv'
   []
   [disp_z_L2_error]
     type = ElementL2Error
     variable = disp_z
     function = disp_z_analytical
     execute_on = 'TIMESTEP_END'
-    # outputs = 'csv'
   []
 
   # H1 seminorm: gradient error only - CSV only

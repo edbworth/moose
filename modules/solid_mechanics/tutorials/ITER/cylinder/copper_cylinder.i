@@ -13,31 +13,6 @@ current_density_z = 0
 # vacuum_permeability = '${units 1.25663706e-6 N/A^2}'
 vacuum_permeability = 1.25663706e-6
 
-# [Mesh]
-#   # Add pin points for constrained boundary conditions
-#   [pin_bottom_0_deg]
-#     type = ExtraNodesetGenerator
-#     input = stabilizer
-#     new_boundary = pin_bottom_0_deg
-#     coord = '${cable_radius} 0 0'
-#     use_closest_node = true
-#   []
-#   [pin_bottom_90_deg]
-#     type = ExtraNodesetGenerator
-#     input = pin_bottom_0_deg
-#     new_boundary = pin_bottom_90_deg
-#     coord = '0 ${cable_radius} 0'
-#     use_closest_node = true
-#   []
-#   [pin_bottom_180_deg]
-#     type = ExtraNodesetGenerator
-#     input = pin_bottom_90_deg
-#     new_boundary = pin_bottom_180_deg
-#     coord = '${fparse -cable_radius} 0 0'
-#     use_closest_node = true
-#   []
-# []
-
 [Kernels]
   [lorentz_x]
     type = ADBodyForce
@@ -99,23 +74,24 @@ vacuum_permeability = 1.25663706e-6
   [pin_x]
     type = ADDirichletBC
     variable = disp_x
-    boundary = 'pin_bottom_90_deg pin_bottom_center'
+    boundary = 'pin_bottom_90_deg' # original
+    # boundary = 'pin_bottom_90_deg pin_bottom_center' # new
     value = 0
   []
   [pin_y]
     type = ADDirichletBC
     variable = disp_y
-    boundary = 'pin_bottom_180_deg pin_bottom_center'
+    boundary = 'pin_bottom_0_deg pin_bottom_180_deg' # old
+    # boundary = 'pin_bottom_180_deg pin_bottom_center' # new
     value = 0
   []
   [pin_z]
     type = ADDirichletBC
     variable = disp_z
-    boundary = 'pin_bottom_center pin_bottom_90_deg pin_bottom_180_deg'
+    boundary = 'pin_bottom_0_deg pin_bottom_90_deg pin_bottom_180_deg' # old
+    # boundary = 'pin_bottom_center pin_bottom_90_deg pin_bottom_180_deg' # new
     value = 0
   []
-  # [pin_new]
-  #   type = prese
 []
 
 [Functions]
@@ -234,13 +210,13 @@ vacuum_permeability = 1.25663706e-6
     sort_by = id
     outputs = 'csv'
   []
-  [bottom_face_stress]
-    type = NodalValueSampler
-    variable = 'stress_xx stress_yy stress_zz stress_xy stress_xz stress_yz'
-    boundary = 'axial_start'
-    sort_by = id
-    outputs = 'csv'
-  []
+  # [bottom_face_stress]
+  #   type = NodalValueSampler
+  #   variable = 'stress_xx stress_yy stress_zz stress_xy stress_xz stress_yz'
+  #   boundary = 'axial_start'
+  #   sort_by = id
+  #   outputs = 'csv'
+  # []
 []
 
 [Outputs]

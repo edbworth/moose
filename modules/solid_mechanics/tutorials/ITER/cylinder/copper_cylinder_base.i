@@ -3,7 +3,7 @@
 ### Include this file in specialized simulations
 
 # ITER Geometry
-cable_length = '${units 0.45 m -> mm}'
+cable_length = '${units 5.0 cm -> mm}'
 cable_radius = '${units 10 mm}'
 
 # Temperature Parameters
@@ -21,11 +21,11 @@ simulation_time = '${units 10 s}'
 [Mesh]
   [circle]
     type = ConcentricCircleMeshGenerator
-    num_sectors = 4
+    num_sectors = 20  # ~1.57 mm circumferential element size
     has_outer_square = false
     preserve_volumes = true
     radii = '${cable_radius}'
-    rings = '2'
+    rings = '10'  # ~1.0 mm radial element size
     smoothing_max_it = 3
   []
   [name_blocks]
@@ -39,7 +39,7 @@ simulation_time = '${units 10 s}'
     input = name_blocks
     direction = '0 0 1'
     heights = '${cable_length}'
-    num_layers = '24'  # Refined to match radial element size (~6.25 mm vs. 5-7.85 mm radial)
+    num_layers = '50'  # ~1.0 mm axial element size (well-shaped elements)
     biases = '1'
     bottom_boundary = 'axial_start'
     top_boundary = 'axial_end'
@@ -81,9 +81,11 @@ simulation_time = '${units 10 s}'
       add_variables = true
       # decomposition_method = EIGENSOLUTION
       eigenstrain_names = 'thermal_expansion'
-      generate_output = 'vonmises_stress strain_xx strain_yy strain_zz strain_xy strain_xz strain_yz stress_xx stress_yy stress_zz stress_xy stress_xz stress_yz'
-      material_output_family = LAGRANGE
-      material_output_order = FIRST
+      # Reduced output for displacement/stress diagnosis
+      # Removed: strain components (strain_xx, strain_yy, strain_zz, strain_xy, strain_xz, strain_yz)
+      generate_output = 'vonmises_stress stress_xx stress_yy stress_zz stress_xy stress_xz stress_yz'
+      # material_output_family = LAGRANGE
+      # material_output_order = FIRST
       temperature = T
       use_automatic_differentiation = true
     []
@@ -274,24 +276,26 @@ simulation_time = '${units 10 s}'
     execute_on = 'INITIAL TIMESTEP_END'
     outputs = 'csv'
   []
-  [strain_xy]
-    type = ElementAverageValue
-    variable = strain_xy
-    execute_on = 'INITIAL TIMESTEP_END'
-    outputs = 'csv'
-  []
-  [strain_xz]
-    type = ElementAverageValue
-    variable = strain_xz
-    execute_on = 'INITIAL TIMESTEP_END'
-    outputs = 'csv'
-  []
-  [strain_yz]
-    type = ElementAverageValue
-    variable = strain_yz
-    execute_on = 'INITIAL TIMESTEP_END'
-    outputs = 'csv'
-  []
+  # Strain postprocessors removed for displacement/stress diagnosis
+  # Re-add if needed by uncommenting generate_output strain components above
+  # [strain_xy]
+  #   type = ElementAverageValue
+  #   variable = strain_xy
+  #   execute_on = 'INITIAL TIMESTEP_END'
+  #   outputs = 'csv'
+  # []
+  # [strain_xz]
+  #   type = ElementAverageValue
+  #   variable = strain_xz
+  #   execute_on = 'INITIAL TIMESTEP_END'
+  #   outputs = 'csv'
+  # []
+  # [strain_yz]
+  #   type = ElementAverageValue
+  #   variable = strain_yz
+  #   execute_on = 'INITIAL TIMESTEP_END'
+  #   outputs = 'csv'
+  # []
   [stress_xx]
     type = ElementAverageValue
     variable = stress_xx
@@ -346,20 +350,26 @@ simulation_time = '${units 10 s}'
 [Executioner]
   type = Transient
   solve_type = NEWTON
-  # petsc_options_iname = '-ksp_type -pc_type -pc_hypre_type -ksp_gmres_restart
-  #                      -pc_hypre_boomeramg_nodal_coarsen
-  #                      -pc_hypre_boomeramg_vec_interp_variant'
-  # petsc_options_value  = 'gmres     hypre    boomeramg      201
-                        # 1
-                        # 1'
-  petsc_options_iname = '-ksp_type -pc_type -pc_factor_mat_solver_type'
-  petsc_options_value = 'preonly   lu       mumps'
-  # petsc_options_iname = '-pc_type'
-  # petsc_options_value  = 'lu'
+
+  # Direct solver with MUMPS - optimal for ~200k DOFs
+  # Exact solve (1 iteration), robust, good parallel scaling up to ~16-32 cores
+  petsc_options_iname = '-ksp_type -pc_type -pc_factor_mat_solver_type
+                         -mat_mumps_icntl_14'
+  petsc_options_value = 'preonly   lu       mumps
+                         200'  # Increase MUMPS working memory by 200%
+
+  # Nonlinear solver tolerances
+  nl_rel_tol = 1e-6    # Sufficient for most mechanics problems
+  nl_abs_tol = 1e-10   # Absolute tolerance as backup
+  nl_max_its = 30      # Usually converges in 5-15 iterations
+
+  # Time stepping
   end_time = ${simulation_time}
   num_steps = 10
-  nl_rel_tol = 5e-9
-  # nl_abs_tol = 1e-12
-  nl_max_its = 50
-  l_max_its = 100
+
+  # Line search for robustness (helps with large deformations)
+  line_search = 'basic'
+
+  # Monitoring (optional - uncomment to watch convergence)
+  # petsc_options = '-snes_monitor -ksp_monitor'
 []
